@@ -1,0 +1,62 @@
+=== STRIPE WEBHOOK SERVER TEST RESULTS ===
+Test Timestamp: 2026-07-08T14:57:15+05:30
+
+--- 1. Node.js Code Syntax Check ---
+$ node --check server.js && node --check db.js
+Status: Success (No syntax errors detected)
+
+--- 2. Database Connection and Schema Initialization ---
+$ node test-db.js
+Testing connection to MySQL...
+Host: localhost
+User: root
+Database: stripe_demo
+✅ Connected to MySQL server successfully.
+✅ Database stripe_demo created or already exists.
+✅ Subscriptions table created or already exists.
+✅ Processed_events table created or already exists.
+
+--- 3. Webhook Endpoint and Idempotency Integration Tests ---
+$ node test-endpoints.js
+🧪 Starting integration tests for Stripe Webhook Server...
+
+--- Test 1: Handle invoice.payment_succeeded ---
+Response Status: 200
+Response Body: {"received":true}
+
+--- Test 2: Read subscription via GET /subscriptions/:customerId ---
+Response Status: 200
+Response Body: {"customer_id":"cus_test_84mder","subscription_id":"sub_test_958xil","plan":"price_premium_monthly","status":"active","current_period_end":1800000000}
+
+--- Test 3: Verify Idempotency (re-send same event) ---
+Response Status: 200
+Response Body: {"received":true,"message":"Duplicate event ignored"}
+
+--- Test 4: Handle invoice.payment_failed ---
+Response Status: 200
+Response Body: {"received":true}
+
+--- Test 5: Verify past_due status via GET /subscriptions/:customerId ---
+Response Status: 200
+Response Body: {"customer_id":"cus_test_84mder","subscription_id":"sub_test_958xil","plan":"price_premium_monthly","status":"past_due","current_period_end":1800000000}
+
+--- Test 6: Handle customer.subscription.deleted ---
+Response Status: 200
+Response Body: {"received":true}
+
+--- Test 7: Verify cancelled status via GET /subscriptions/:customerId ---
+Response Status: 200
+Response Body: {"customer_id":"cus_test_84mder","subscription_id":"sub_test_958xil","plan":"price_premium_monthly","status":"cancelled","current_period_end":1800000000}
+
+✅ Tests complete!
+
+--- 4. Server Execution Logs ---
+🚀 Stripe Webhook Server listening on port 3000
+📬 Received Stripe event: invoice.payment_succeeded (ID: evt_test_g6iy2c)
+✅ [invoice.payment_succeeded] Updated customer subscription: cus_test_84mder
+📬 Received Stripe event: invoice.payment_succeeded (ID: evt_test_g6iy2c)
+ℹ️ Event evt_test_g6iy2c was already processed. Ignoring.
+📬 Received Stripe event: invoice.payment_failed (ID: evt_test_klo9xr)
+⚠️ [invoice.payment_failed] Updated status to past_due for customer: cus_test_84mder
+📬 Received Stripe event: customer.subscription.deleted (ID: evt_test_30m18l)
+❌ [customer.subscription.deleted] Cancelled subscription for customer: cus_test_84mder
